@@ -4,6 +4,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.{Play, Logger}
+import play.api.libs.json.JsResultException
 import play.api.libs.ws.WS
 import play.api.Play.current
 
@@ -19,15 +20,15 @@ object TweetFetcher {
       .get()
       .map(response => {
         Logger.debug("Reading json from tweets")
-        val maybeTweets = response.json.validate[List[Tweet]].asOpt
-        if (maybeTweets.isDefined) {
-          Logger.debug("Transform json to tweets with success")
 
-          maybeTweets.get
-        } else {
-          Logger.warn("Failed to get tweets from json")
-
-          throw new IllegalStateException("Invalid json")
+        try {
+          response.json.as[Seq[Tweet]].toList
+        }
+        catch {
+          case e: JsResultException => {
+            Logger.warn("Error while reading json", e)
+            throw new IllegalStateException("Invalid json", e)
+          }
         }
     })
   }
